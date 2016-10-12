@@ -96,7 +96,6 @@ def search_by_time_spent(error=None):
             for entry in work_log_reader:
                 entry_time = convert_string_to_timedelta(entry['time_spent'], '%H:%M:%S')
                 if minimum <= entry_time <= maximum:
-                    # print_entry(entry)
                     entries.append(entry)
         print_entries(entries)
     elif time_format.search(user_input):
@@ -128,28 +127,22 @@ def search_by_date(error=None):
         date_list = user_input.split('-')
         start = datetime.strptime(date_list[0].strip(), '%m/%d/%y')
         end = datetime.strptime(date_list[1].strip(), '%m/%d/%y')
+        entries = []
         with open(work_log_filename, 'r') as work_log:
             work_log_reader = csv.DictReader(work_log)
-            logs = []
             for idx, entry in enumerate(work_log_reader):
                 entry_date = datetime.strptime(entry['date'], '%m/%d/%y')
                 if start <= entry_date <= end:
-                    logs.append(entry)
-            if len(logs) == 0:
-                print("Sorry, no entries were found.")
-            for log in logs:
-                print_entry(log)
+                    entries.append(entry)
+        print_entries(entries)
     elif date.search(user_input):
+        entries = []
         with open(work_log_filename, 'r') as work_log:
             work_log_reader = csv.DictReader(work_log)
-            logs = []
             for idx, entry in enumerate(work_log_reader):
                 if user_input == entry['date']:
-                    logs.append(entry)
-            if len(logs) == 0:
-                print("Sorry, no entries were found.")
-            for log in logs:
-                print_entry(log)
+                    entries.append(entry)
+        print_entries(entries)
     else:
         error = "I don't recognize that format. Please try again.\n"
         return search_by_date(error)
@@ -159,38 +152,30 @@ def search_by_date(error=None):
 def search_by_string():
     clear_screen()
     user_input = input("What would you like to search for? ").lower()
-    found = False
+    entries = []
     with open(work_log_filename, 'r') as work_log:
         work_log_reader = csv.DictReader(work_log)
-        for row in work_log_reader:
-            if(user_input in row['name'].lower() or
-               user_input in row['notes'].lower()):
-                found = True
-                print_entry(row)
-    if not found:
-        print("No results were found.")
-    print()
-    input("Press enter to return to the main menu...")
+        for entry in work_log_reader:
+            if(user_input in entry['name'].lower() or
+               user_input in entry['notes'].lower()):
+                entries.append(entry)
+    print_entries(entries)
 
 
 def search_by_pattern():
     clear_screen()
     user_input = input("What pattern would you like to search for? ")
     search = re.compile(user_input)
-    found = False
+    entries = []
     with open(work_log_filename, 'r') as work_log:
         work_log_reader = csv.DictReader(work_log)
-        for row in work_log_reader:
+        for entry in work_log_reader:
             try:
-                if search.search(row['name']) or search.search(row['notes']):
-                    found = True
-                    print_entry(row)
+                if search.search(entry['name']) or search.search(entry['notes']):
+                    entries.append(entry)
             except IndexError:
                 pass
-    if not found:
-        print("No results were found.")
-    print()
-    input("Press enter to return to the main menu...")
+    print_entries(entries)
 
 
 def print_entry(entry):
@@ -206,10 +191,18 @@ def print_entry(entry):
 
 def print_entries(entries):
     # Display records one at a time and allow edit/deletion and next/prev/exit
+    if len(entries) == 0:
+        print("\nNo results were found.\n")
+        input("Press enter to return to the main menu...")
+        start()
     counter = 0
     error = None
     while True:
         clear_screen()
+        if len(entries) == 0:
+            print("There are no more entries!")
+            input("Press enter to return to the main menu...")
+            start()
         if error:
             print(error)
             input("Press enter to continue...")
@@ -274,7 +267,7 @@ def convert_string_to_timedelta(time, fmt='%H:%M'):
 
 
 def convert_minutes_to_timedelta(minutes):
-    if int(minutes) > 60:
+    if int(minutes) >= 60:
         minutes = int(minutes)
         hours = int(minutes / 60)
         minutes = minutes % 60
