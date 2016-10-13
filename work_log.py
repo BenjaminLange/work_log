@@ -30,13 +30,13 @@ def new_entry():
     clear_screen()
     entry = {}
     entry['id'] = get_next_id()
-    entry['name'] = input_new_name()
+    entry['name'] = input_name()
     print("How many minutes did you spend on {}?".format(entry['name']))
     print("You may specify a format after the time, seperated by a comma")
-    entry['time_spent'] = input_new_time_spent()
+    entry['time_spent'] = input_time_spent()
     add_notes = input("Add notes? Y/n ").lower()
     if add_notes != 'n':
-        entry['notes'] = input_new_notes()
+        entry['notes'] = input_notes()
     entry['date'] = datetime.now().strftime('%m/%d/%y')
     fieldnames = ['id', 'name', 'date', 'time_spent', 'notes']
     with open(work_log_filename, 'a', newline='') as work_log:
@@ -44,13 +44,16 @@ def new_entry():
         work_log_writer.writerow(entry)
 
 
-def input_new_name():
+def input_name(update=False):
     name = input("Task Name: ")
     return name
 
 
-def input_new_time_spent():
+def input_time_spent(update=False):
     time_spent = input("Time Spent: ")
+    if update:
+        if time_spent == '':
+            return ''
     if ',' in time_spent:
         entry_list = time_spent.split(',')
         entry_time = entry_list[0]
@@ -61,23 +64,10 @@ def input_new_time_spent():
             return convert_minutes_to_timedelta(time_spent)
         except ValueError:
             print("I don't recognize that format. Please try again.")
-            return input_new_time_spent()
+            return input_time_spent()
 
 
-def input_update_time_spent():
-    time_spent = input("Time Spent: ")
-    if time_spent == '':
-        return ''
-    if ',' in time_spent:
-        entry_list = time_spent.split(',')
-        entry_time = entry_list[0]
-        entry_time_format = entry_list[1]
-        return convert_string_to_timedelta(entry_time, entry_time_format)
-    else:
-        return convert_minutes_to_timedelta(time_spent)
-
-
-def input_new_notes():
+def input_notes(update=False):
     note_list = []
     notes = "A"
     print("Notes:")
@@ -88,18 +78,7 @@ def input_new_notes():
     return notes
 
 
-def input_new_date():
-    date = input("Date (MM/DD/YY): ")
-    try:
-        date = datetime.strptime(date, '%m/%d/%y')
-    except ValueError:
-        print("I don't recognize that format, please try again.")
-        return input_new_date()
-    date = date.strftime('%m/%d/%y')
-    return date
-
-
-def input_update_date():
+def input_date(update=False):
     date = input("Date (MM/DD/YY): ")
     if date == '':
         return ''
@@ -107,7 +86,7 @@ def input_update_date():
         date = datetime.strptime(date, '%m/%d/%y')
     except ValueError:
         print("I don't recognize that format, please try again.")
-        return input_new_date()
+        return input_date()
     date = date.strftime('%m/%d/%y')
     return date
 
@@ -314,13 +293,13 @@ def edit_entry(entry):
     prev_date = entry['date']
     prev_time_spent = entry['time_spent']
     prev_notes = entry['notes']
-    new_name = input_new_name()
+    new_name = input_name(update=True)
     entry['name'] = new_name or prev_name
-    new_date = input_update_date()
+    new_date = input_date(update=True)
     entry['date'] = new_date or prev_date
-    new_time_spent = input_update_time_spent()
+    new_time_spent = input_time_spent(update=True)
     entry['time_spent'] = new_time_spent or prev_time_spent
-    new_notes = input_new_notes()
+    new_notes = input_notes(update=True)
     entry['notes'] = new_notes or prev_notes
 
     with open(work_log_filename, 'r') as work_log:
