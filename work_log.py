@@ -30,32 +30,86 @@ def new_entry():
     clear_screen()
     entry = {}
     entry['id'] = get_next_id()
-    entry['name'] = input("Enter a name for the task: ")
+    entry['name'] = input_new_name()
     print("How many minutes did you spend on {}?".format(entry['name']))
     print("You may specify a format after the time, seperated by a comma")
-    entry['time_spent'] = input("> ")
-    if ',' in entry['time_spent']:
-        entry_list = entry['time_spent'].split(',')
-        entry_time = entry_list[0]
-        entry_time_format = entry_list[1]
-        entry['time_spent'] = convert_string_to_timedelta(entry_time, entry_time_format)
-    else:
-        entry['time_spent'] = convert_minutes_to_timedelta(entry['time_spent'])
+    entry['time_spent'] = input_new_time_spent()
     add_notes = input("Add notes? Y/n ").lower()
-    note_list = []
     if add_notes != 'n':
-        print("Enter any notes or comments. Enter a blank line to save.")
-        notes = "A"
-        while notes != '':
-            notes = input("> ")
-            note_list.append(notes.replace('\\n', '\n'))
-    notes = '\n'.join(note_list)
-    entry['notes'] = notes
+        entry['notes'] = input_new_notes()
     entry['date'] = datetime.now().strftime('%m/%d/%y')
     fieldnames = ['id', 'name', 'date', 'time_spent', 'notes']
     with open(work_log_filename, 'a', newline='') as work_log:
         work_log_writer = csv.DictWriter(work_log, fieldnames=fieldnames)
         work_log_writer.writerow(entry)
+
+
+def input_new_name():
+    name = input("Task Name: ")
+    return name
+
+
+def input_new_time_spent():
+    time_spent = input("Time Spent: ")
+    if ',' in time_spent:
+        entry_list = time_spent.split(',')
+        entry_time = entry_list[0]
+        entry_time_format = entry_list[1]
+        return convert_string_to_timedelta(entry_time, entry_time_format)
+    else:
+        try:
+            return convert_minutes_to_timedelta(time_spent)
+        except ValueError:
+            print("I don't recognize that format. Please try again.")
+            return input_new_time_spent()
+
+
+def input_update_time_spent():
+    time_spent = input("Time Spent: ")
+    if time_spent == '':
+        return ''
+    if ',' in time_spent:
+        entry_list = time_spent.split(',')
+        entry_time = entry_list[0]
+        entry_time_format = entry_list[1]
+        return convert_string_to_timedelta(entry_time, entry_time_format)
+    else:
+        return convert_minutes_to_timedelta(time_spent)
+
+
+def input_new_notes():
+    note_list = []
+    notes = "A"
+    print("Notes:")
+    while notes != '':
+        notes = input("> ")
+        note_list.append(notes.replace('\\n', '\n'))
+    notes = '\n'.join(note_list)
+    return notes
+
+
+def input_new_date():
+    date = input("Date (MM/DD/YY): ")
+    try:
+        date = datetime.strptime(date, '%m/%d/%y')
+    except ValueError:
+        print("I don't recognize that format, please try again.")
+        return input_new_date()
+    date = date.strftime('%m/%d/%y')
+    return date
+
+
+def input_update_date():
+    date = input("Date (MM/DD/YY): ")
+    if date == '':
+        return ''
+    try:
+        date = datetime.strptime(date, '%m/%d/%y')
+    except ValueError:
+        print("I don't recognize that format, please try again.")
+        return input_new_date()
+    date = date.strftime('%m/%d/%y')
+    return date
 
 
 def search():
@@ -83,7 +137,7 @@ def search_by_time_spent(error=None):
     print("Enter the minute amount to search for or search using %H:%M.")
     print("You may specify a time range using %H:%M - %H:%M")
     user_input = input("> ").strip()
-    time_range = re.compile(r'\d{1,2}:\d\d - \d{1,2}:\d\d')
+    time_range = re.compile(r'\d{1,2}:\d{1,2} - \d{1,2}:\d{1,2}')
     time_format = re.compile(r'\d{1,2}:\d\d')
     minute_format = re.compile(r'^\d+$')
     if time_range.search(user_input):
@@ -229,7 +283,7 @@ def print_entries(entries):
             if counter > len(entries) - 1:
                 counter -= 1
         elif user_input == 'e':
-            edit_entry(entries[counter]['id'])
+            edit_entry(entries[counter])
         else:
             counter += 1
             if counter > len(entries) - 1:
@@ -251,11 +305,38 @@ def delete_entry(id):
                 copy_writer.writerow(entry)
         copy.close()
     os.remove(work_log_filename)
-    os.rename("temp_work_log.csv", work_log_filename)
+    os.rename('temp_work_log.csv', work_log_filename)
 
 
-def edit_entry(id):
-    pass
+def edit_entry(entry):
+    print("\nUpdate each value or press enter to leave it unchanged.\n")
+    prev_name = entry['name']
+    prev_date = entry['date']
+    prev_time_spent = entry['time_spent']
+    prev_notes = entry['notes']
+    new_name = input_new_name()
+    entry['name'] = new_name or prev_name
+    new_date = input_update_date()
+    entry['date'] = new_date or prev_date
+    new_time_spent = input_update_time_spent()
+    entry['time_spent'] = new_time_spent or prev_time_spent
+    new_notes = input_new_notes()
+    entry['notes'] = new_notes or prev_notes
+
+    with open(work_log_filename, 'r') as work_log:
+        fieldnames = ['id', 'name', 'date', 'time_spent', 'notes']
+        copy = open('temp_work_log.csv', 'a', newline='')
+        copy_writer = csv.DictWriter(copy, fieldnames=fieldnames)
+        copy_writer.writeheader()
+        work_log_reader = csv.DictReader(work_log)
+        for prev_entry in work_log_reader:
+            if prev_entry['id'] == entry['id']:
+                copy_writer.writerow(entry)
+            else:
+                copy_writer.writerow(prev_entry)
+        copy.close()
+    os.remove(work_log_filename)
+    os.rename('temp_work_log.csv', work_log_filename)
 
 
 def convert_string_to_timedelta(time, fmt='%H:%M'):
