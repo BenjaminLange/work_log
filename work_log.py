@@ -14,7 +14,17 @@ FMT_HOUR_MINUTE = '%H:%M'
 FIELDNAMES = ['id', 'name', 'date', 'time_spent', 'notes']
 
 
+def initialize():
+    """Creates a work log csv file with headers if the file does not exist"""
+    if not os.path.isfile(WORK_LOG_FILENAME):
+        with open(WORK_LOG_FILENAME, 'a', newline='') as work_log:
+            work_log_writer = csv.DictWriter(work_log, fieldnames=FIELDNAMES)
+            work_log_writer.writeheader()
+
+
 def start():
+    """Displays a menu that allows navigation to create a new entry,
+    search, or quit"""
     while True:
         clear_screen()
         print("Select an option:")
@@ -25,18 +35,19 @@ def start():
         if user_input == 'q':
             sys.exit()
         if user_input == 's':
-            search()
+            search_menu()
         else:
             new_entry()
 
 
 def new_entry():
+    """Adds a new entry to the work log csv file"""
     clear_screen()
     entry = {}
     entry['id'] = get_next_id()
     entry['name'] = input_name()
     print("How many minutes did you spend on {}?".format(entry['name']))
-    print("You may specify a format after the time, seperated by a comma")
+    print("Or you may specify a format after the time, seperated by a comma")
     entry['time_spent'] = input_time_spent()
     add_notes = input("Add notes? Y/n ").lower()
     if add_notes != 'n':
@@ -73,7 +84,7 @@ def input_time_spent(update=False):
 def input_notes():
     note_list = []
     notes = "A"
-    print("Notes:")
+    print("Notes (Enter a blank line to save):")
     while notes != '':
         notes = input("> ")
         note_list.append(notes.replace('\\n', '\n'))
@@ -95,7 +106,8 @@ def input_date(update=False):
     return date
 
 
-def search():
+def search_menu():
+    """Displays a menu to pick search method"""
     clear_screen()
     print("What would you like to search by?")
     print("  d: Date (Default)")
@@ -221,6 +233,7 @@ def search_by_pattern():
 
 
 def print_entry(entry):
+    """Print a single entry to the screen"""
     border = '-' * 50
     print(border)
     print(entry['name'])
@@ -232,7 +245,8 @@ def print_entry(entry):
 
 
 def print_entries(entries):
-    # Display records one at a time and allow edit/deletion and next/prev/exit
+    """Prints a list of log entries and allows paging through each entry
+    individually. Also allows picking an entry for editing or deletion."""
     if len(entries) == 0:
         print("\nNo results were found.\n")
         input("Press enter to return to the main menu...")
@@ -339,9 +353,9 @@ def convert_minutes_to_timedelta(minutes_string):
         hours = int(minutes / 60)
         minutes = minutes % 60
         minutes_string = "{}:{}".format(hours, minutes)
-        minutes_date_time = datetime.strptime(minutes, FMT_HOUR_MINUTE)
+        minutes_date_time = datetime.strptime(minutes_string, FMT_HOUR_MINUTE)
     else:
-        minutes_date_time = datetime.strptime(minutes, '%M')
+        minutes_date_time = datetime.strptime(minutes_string, '%M')
     minutes_delta = timedelta(hours=minutes_date_time.hour,
                               minutes=minutes_date_time.minute,
                               seconds=minutes_date_time.second)
@@ -349,6 +363,7 @@ def convert_minutes_to_timedelta(minutes_string):
 
 
 def get_next_id():
+    """Gets the next unique id for creating a new entry"""
     with open(WORK_LOG_FILENAME, 'r') as work_log:
         work_log_reader = csv.DictReader(work_log)
         entry_id = 0
@@ -367,4 +382,5 @@ def clear_screen():
 
 
 if __name__ == '__main__':
+    initialize()
     start()
